@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>จัดการคำสั่งซื้อ | ร้านหนังสือรัตน์ (Orders Management)</title>
+  <meta name="description" content="ระบบจัดการคำสั่งซื้อ ตรวจสอบสลิป และอัปเดตสถานะจัดส่ง สำหรับร้านหนังสือรัตน์">
+  <link rel="icon" type="image/png" href="social-preview.png">
+  <link rel="shortcut icon" type="image/png" href="social-preview.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              light: "#F3E3D0",
+              DEFAULT: "#8C5A34",
+              hover: "#73472B",
+              dark: "#56331D"
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="style.css?v=20260815-1">
+</head>
+<body class="page-bg min-h-screen flex flex-col text-stone-800 dark:text-stone-100 transition-colors duration-200">
+
+  <div id="orders-auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md panel p-6 sm:p-7">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center bg-gradient-to-br from-amber-600 via-orange-500 to-amber-400 text-white shadow-lg shadow-amber-700/20">
+          <i class="fas fa-lock text-xl"></i>
+        </div>
+        <h2 class="mt-4 text-2xl font-black text-stone-900 dark:text-stone-100">เข้าสู่ระบบแอดมิน</h2>
+        <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งานระบบจัดการออเดอร์</p>
+      </div>
+
+      <form id="orders-login-form" class="space-y-4">
+        <div>
+          <label for="orders-email" class="block mb-1.5 text-xs font-bold text-stone-700 dark:text-stone-300">อีเมล</label>
+          <input id="orders-email" type="email" required class="inp text-sm" placeholder="admin@rattbookstore.com">
+        </div>
+        <div>
+          <label for="orders-password" class="block mb-1.5 text-xs font-bold text-stone-700 dark:text-stone-300">รหัสผ่าน</label>
+          <input id="orders-password" type="password" required class="inp text-sm" placeholder="กรอกรหัสผ่าน">
+        </div>
+        <div id="orders-auth-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-600 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-400"></div>
+        <button type="submit" class="btn-primary w-full py-3 text-sm font-bold">
+          <i class="fas fa-right-to-bracket mr-2"></i> เข้าสู่ระบบ
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="orders-app-shell" class="hidden flex flex-col min-h-screen">
+    <header class="glass-nav sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br from-amber-600 via-orange-500 to-amber-400 shadow-lg shadow-amber-700/20 border border-amber-200/20">
+            <i class="fas fa-receipt text-amber-50"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="flex items-center gap-2">
+              <h1 class="text-base font-extrabold tracking-tight text-stone-900 dark:text-stone-100">จัดการคำสั่งซื้อ</h1>
+              <span class="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">Orders</span>
+            </div>
+            <p class="text-[10px] text-stone-500 dark:text-stone-400 font-semibold tracking-wide">ร้านหนังสือรัตน์ · Realtime Orders System</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <a href="admins.html" class="flex items-center gap-1.5 text-xs font-bold text-stone-600 dark:text-stone-300 hover:text-primary dark:hover:text-amber-300 border border-stone-200 dark:border-stone-700 rounded-xl px-3.5 py-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+            <i class="fas fa-user-shield text-xs"></i> จัดการแอดมิน
+          </a>
+          <a href="admin.html" class="flex items-center gap-1.5 text-xs font-bold text-stone-600 dark:text-stone-300 hover:text-primary dark:hover:text-amber-300 border border-stone-200 dark:border-stone-700 rounded-xl px-3.5 py-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+            <i class="fas fa-box text-xs"></i> จัดการหนังสือ
+          </a>
+          <a href="index.html" class="flex items-center gap-1.5 text-xs font-bold text-stone-600 dark:text-stone-300 hover:text-primary dark:hover:text-amber-300 border border-stone-200 dark:border-stone-700 rounded-xl px-3.5 py-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+            <i class="fas fa-store text-xs"></i> หน้าร้าน
+          </a>
+          <button onclick="toggleTheme()" class="ico-btn" title="เปลี่ยนธีม">
+            <i class="fas fa-moon text-sm dark:hidden"></i>
+            <i class="fas fa-sun text-sm hidden dark:block text-amber-300"></i>
+          </button>
+          <button id="orders-logout-btn" class="order-2 border border-stone-200 dark:border-stone-700 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+            <i class="fas fa-right-from-bracket mr-1"></i> ออกจากระบบ
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="panel p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center text-xl shrink-0">
+            <i class="fas fa-shopping-bag"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">คำสั่งซื้อทั้งหมด</p>
+            <p id="stat-total-orders" class="text-2xl font-black text-stone-900 dark:text-stone-100 font-sans mt-0.5">0</p>
+          </div>
+        </div>
+        <div class="panel p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">รอตรวจสอบ (PENDING)</p>
+            <p id="stat-pending-orders" class="text-2xl font-black text-amber-600 dark:text-amber-400 font-sans mt-0.5">0</p>
+          </div>
+        </div>
+        <div class="panel p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
+            <i class="fas fa-circle-check"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">ยืนยัน / สำเร็จ</p>
+            <p id="stat-done-orders" class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-sans mt-0.5">0</p>
+          </div>
+        </div>
+        <div class="panel p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 flex items-center justify-center text-xl shrink-0">
+            <i class="fas fa-baht-sign"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">ยอดขายรวมสุทธิ</p>
+            <p id="stat-revenue" class="text-2xl font-black text-sky-600 dark:text-sky-400 font-sans mt-0.5">฿0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel p-3 md:p-4">
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="orders-tab-website" onclick="ordersWebsite.openTab()" class="orders-tab-btn inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition">
+            <i class="fas fa-globe text-[11px]"></i> เว็บไซต์
+          </button>
+          <button type="button" id="orders-tab-shopee" onclick="lockMarketplaceDevelopment('Shopee')" class="orders-tab-btn inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition opacity-60 cursor-not-allowed">
+            <i class="fas fa-store text-[11px]"></i> Shopee
+            <span class="rounded-full bg-stone-200 px-2 py-0.5 text-[10px] font-black text-stone-600">ล็อก</span>
+          </button>
+          <button type="button" id="orders-tab-tiktok" onclick="lockMarketplaceDevelopment('TikTok')" class="orders-tab-btn inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold transition opacity-60 cursor-not-allowed">
+            <i class="fab fa-tiktok text-[11px]"></i> TikTok
+            <span class="rounded-full bg-stone-200 px-2 py-0.5 text-[10px] font-black text-stone-600">ล็อก</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="orders-tab-panel-website" class="orders-tab-panel panel p-4 md:p-5 space-y-3">
+        <div class="flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between">
+          <div class="relative flex-1">
+            <input type="text" id="order-search" oninput="filterOrders()" placeholder="ค้นหาเลขคำสั่งซื้อ / ชื่อลูกค้า / เบอร์โทร / หมายเหตุ..." class="inp pl-10 text-xs py-2.5">
+            <i class="fas fa-search absolute left-3.5 top-3 text-stone-400 text-xs"></i>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button onclick="lockMarketplaceDevelopment('Shopee')" class="flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 opacity-60 cursor-not-allowed transition whitespace-nowrap">
+              <i class="fas fa-file-excel text-[11px]"></i> Export Shopee
+            </button>
+            <button onclick="lockMarketplaceDevelopment('TikTok')" class="flex items-center justify-center gap-1.5 border border-sky-200 dark:border-sky-800 rounded-xl px-4 py-2.5 text-xs font-bold text-sky-700 dark:text-sky-300 opacity-60 cursor-not-allowed transition whitespace-nowrap">
+              <i class="fas fa-file-excel text-[11px]"></i> Export TikTok
+            </button>
+            <button onclick="lockMarketplaceDevelopment('Shopee')" class="flex items-center justify-center gap-1.5 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2.5 text-xs font-bold text-amber-700 dark:text-amber-300 opacity-60 cursor-not-allowed transition whitespace-nowrap">
+              <i class="fas fa-upload text-[11px]"></i> Upload Shopee
+            </button>
+            <button onclick="lockMarketplaceDevelopment('TikTok')" class="flex items-center justify-center gap-1.5 border border-fuchsia-200 dark:border-fuchsia-800 rounded-xl px-4 py-2.5 text-xs font-bold text-fuchsia-700 dark:text-fuchsia-300 opacity-60 cursor-not-allowed transition whitespace-nowrap">
+              <i class="fas fa-upload text-[11px]"></i> Upload TikTok
+            </button>
+
+          <button onclick="ordersWebsite.refresh()" class="flex items-center justify-center gap-1.5 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-800 transition">
+            <i class="fas fa-rotate-right text-[10px]"></i> รีเฟรช
+          </button>
+        </div>
+
+        </div>
+        <div class="flex flex-wrap gap-2.5 items-center">
+          <select id="order-status-filter" onchange="filterOrders()" class="inp text-xs py-2.5 flex-1 min-w-[140px] cursor-pointer">
+            <option value="all">สถานะทั้งหมด</option>
+            <option value="pending">⏳ รอตรวจสอบ</option>
+            <option value="confirmed">✅ ยืนยันออเดอร์</option>
+            <option value="shipped">🚚 จัดส่งแล้ว</option>
+            <option value="done">🎉 เสร็จสิ้น</option>
+            <option value="cancelled">❌ ยกเลิก</option>
+          </select>
+
+          <select id="order-payment-filter" onchange="filterOrders()" class="inp text-xs py-2.5 flex-1 min-w-[140px] cursor-pointer">
+            <option value="all">ช่องทางชำระทั้งหมด</option>
+            <option value="promptpay">📱 พร้อมเพย์ (PromptPay)</option>
+            <option value="cod">🚚 เก็บเงินปลายทาง (COD)</option>
+          </select>
+
+          <select id="order-slip-filter" onchange="filterOrders()" class="inp text-xs py-2.5 flex-1 min-w-[140px] cursor-pointer">
+            <option value="all">การอนุมัติสลิปทั้งหมด</option>
+            <option value="pending">⏳ รอตรวจสอบสลิป</option>
+            <option value="paid">✅ อนุมัติสลิปแล้ว</option>
+            <option value="failed">❌ ไม่อนุมัติสลิป</option>
+          </select>
+
+          <div class="flex items-center gap-1.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-1.5 text-xs">
+            <i class="fas fa-calendar-alt text-primary dark:text-amber-400 text-xs"></i>
+            <input type="date" id="order-date-start" onchange="filterOrders()" class="bg-transparent text-stone-800 dark:text-stone-200 text-xs font-semibold focus:outline-none cursor-pointer" title="วันที่เริ่มต้น">
+            <span class="text-stone-400 text-xs font-bold">-</span>
+            <input type="date" id="order-date-end" onchange="filterOrders()" class="bg-transparent text-stone-800 dark:text-stone-200 text-xs font-semibold focus:outline-none cursor-pointer" title="วันที่สิ้นสุด">
+            <button type="button" onclick="clearDateFilter()" title="ล้างวันที่" class="text-stone-400 hover:text-rose-500 text-xs ml-1 transition">
+              <i class="fas fa-times-circle"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="orders-tab-panel-shopee" class="orders-tab-panel panel p-4 md:p-5 space-y-3 hidden">
+        <div class="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+          <div>
+            <h3 class="text-sm font-extrabold text-stone-900 dark:text-stone-100">จัดการไฟล์ Shopee</h3>
+            <p class="text-xs text-stone-500 dark:text-stone-400">อัปโหลดไฟล์เพื่อตรวจสอบคอลัมน์ และส่งออกคำสั่งซื้อสำหรับ Shopee</p>
+          </div>
+	          <div class="flex flex-wrap gap-2">
+	            <button onclick="ordersShopee.uploadFile()" class="flex items-center justify-center gap-1.5 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2.5 text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition whitespace-nowrap">
+	              <i class="fas fa-upload text-[11px]"></i> Upload Shopee
+	            </button>
+	            <button onclick="ordersShopee.exportFile()" class="flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition whitespace-nowrap">
+	              <i class="fas fa-file-excel text-[11px]"></i> Export Shopee
+	            </button>
+	          </div>
+	        </div>
+	        <div class="space-y-3">
+	          <div class="panel p-4 md:p-5 border border-stone-200/70 dark:border-stone-800/70 bg-gradient-to-r from-white to-stone-50/70 dark:from-stone-950 dark:to-stone-900/70">
+	            <h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-400 mb-3">อัปโหลดล่าสุด</h4>
+	            <div id="shopee-import-summary" class="text-xs text-stone-500">ยังไม่มีข้อมูลอัปโหลด Shopee</div>
+	          </div>
+	          <div class="panel p-4 md:p-5 overflow-x-auto border border-stone-200/70 dark:border-stone-800/70 shadow-[0_12px_40px_rgba(120,88,32,0.06)]">
+	            <div class="flex items-center justify-between gap-2 mb-4">
+	              <h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-400">รายการจากไฟล์ล่าสุด</h4>
+	              <span id="shopee-import-count" class="text-[11px] text-stone-400">0 แถว</span>
+	            </div>
+	            <table class="w-full text-left border-collapse">
+		              <thead id="shopee-import-head">
+	                <tr class="border-b border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-900/60 text-[11px] font-bold text-stone-400 uppercase tracking-wider">
+	                  <th class="py-3 px-3">Order</th>
+	                  <th class="py-3 px-3">SKU</th>
+	                  <th class="py-3 px-3">สินค้า</th>
+	                  <th class="py-3 px-3">เลขที่พัสดุ</th>
+	                  <th class="py-3 px-3 text-center">จำนวน</th>
+	                  <th class="py-3 px-3">ผู้ซื้อ</th>
+	                </tr>
+	              </thead>
+	              <tbody id="shopee-import-rows" class="divide-y divide-stone-100 dark:divide-stone-800/60 text-xs">
+	                <tr><td colspan="6" class="py-8 px-3 text-center text-stone-400">ยังไม่มีข้อมูลอัปโหลด Shopee</td></tr>
+	              </tbody>
+	            </table>
+	          </div>
+	        </div>
+	      </div>
+
+      <div id="orders-tab-panel-tiktok" class="orders-tab-panel panel p-4 md:p-5 space-y-3 hidden">
+        <div class="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+          <div>
+            <h3 class="text-sm font-extrabold text-stone-900 dark:text-stone-100">จัดการไฟล์ TikTok</h3>
+            <p class="text-xs text-stone-500 dark:text-stone-400">อัปโหลดไฟล์เพื่อตรวจสอบคอลัมน์ และส่งออกคำสั่งซื้อสำหรับ TikTok</p>
+          </div>
+	          <div class="flex flex-wrap gap-2">
+	            <button onclick="ordersTiktok.uploadFile()" class="flex items-center justify-center gap-1.5 border border-fuchsia-200 dark:border-fuchsia-800 rounded-xl px-4 py-2.5 text-xs font-bold text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/40 transition whitespace-nowrap">
+	              <i class="fas fa-upload text-[11px]"></i> Upload TikTok
+	            </button>
+	            <button onclick="ordersTiktok.exportFile()" class="flex items-center justify-center gap-1.5 border border-sky-200 dark:border-sky-800 rounded-xl px-4 py-2.5 text-xs font-bold text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition whitespace-nowrap">
+	              <i class="fas fa-file-excel text-[11px]"></i> Export TikTok
+	            </button>
+	          </div>
+	        </div>
+	        <div class="space-y-3">
+	          <div class="panel p-4 md:p-5 border border-stone-200/70 dark:border-stone-800/70 bg-gradient-to-r from-white to-stone-50/70 dark:from-stone-950 dark:to-stone-900/70">
+	            <h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-400 mb-3">อัปโหลดล่าสุด</h4>
+	            <div id="tiktok-import-summary" class="text-xs text-stone-500">ยังไม่มีข้อมูลอัปโหลด TikTok</div>
+	          </div>
+	          <div class="panel p-4 md:p-5 overflow-x-auto border border-stone-200/70 dark:border-stone-800/70 shadow-[0_12px_40px_rgba(120,88,32,0.06)]">
+	            <div class="flex items-center justify-between gap-2 mb-4">
+	              <h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-400">รายการจากไฟล์ล่าสุด</h4>
+	              <span id="tiktok-import-count" class="text-[11px] text-stone-400">0 แถว</span>
+	            </div>
+	            <table class="w-full text-left border-collapse">
+		              <thead id="tiktok-import-head">
+	                <tr class="border-b border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-900/60 text-[11px] font-bold text-stone-400 uppercase tracking-wider">
+	                  <th class="py-3 px-3">Order</th>
+	                  <th class="py-3 px-3">SKU</th>
+	                  <th class="py-3 px-3">สินค้า</th>
+	                  <th class="py-3 px-3">เลขที่พัสดุ</th>
+	                  <th class="py-3 px-3 text-center">จำนวน</th>
+	                  <th class="py-3 px-3">ผู้ซื้อ</th>
+	                </tr>
+	              </thead>
+	              <tbody id="tiktok-import-rows" class="divide-y divide-stone-100 dark:divide-stone-800/60 text-xs">
+	                <tr><td colspan="6" class="py-8 px-3 text-center text-stone-400">ยังไม่มีข้อมูลอัปโหลด TikTok</td></tr>
+	              </tbody>
+	            </table>
+	          </div>
+	        </div>
+	      </div>
+
+      <input id="shopee-upload-input" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleMarketplaceUpload('shopee', event)">
+      <input id="tiktok-upload-input" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleMarketplaceUpload('tiktok', event)">
+
+      <div id="marketplace-import-panel" class="panel p-4 md:p-5 hidden">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-sm font-extrabold text-stone-900 dark:text-stone-100">Preview ไฟล์ Marketplace</h3>
+            <p id="marketplace-import-meta" class="text-xs text-stone-500 dark:text-stone-400">ยังไม่มีไฟล์ที่อัปโหลด</p>
+          </div>
+          <button type="button" onclick="clearMarketplaceImport()" class="border border-stone-200 dark:border-stone-700 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition">
+            <i class="fas fa-trash-can mr-1"></i> ล้างตัวอย่าง
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr id="marketplace-import-head" class="border-b border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-900/60 text-[11px] font-bold text-stone-400 uppercase tracking-wider"></tr>
+            </thead>
+            <tbody id="marketplace-import-body" class="divide-y divide-stone-100 dark:divide-stone-800/60 text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="orders-data-panel" class="panel overflow-hidden">
+        <div id="orders-loading" class="py-20 flex flex-col items-center gap-3">
+          <div class="spinner"></div>
+          <p class="text-xs text-stone-400 font-semibold">กำลังดึงรายการคำสั่งซื้อ...</p>
+        </div>
+
+        <div id="orders-empty" class="hidden py-16 text-center space-y-3">
+          <i class="fas fa-receipt text-4xl text-stone-300 dark:text-stone-700"></i>
+          <p class="text-sm font-bold text-stone-600 dark:text-stone-400">ยังไม่มีรายการคำสั่งซื้อในระบบ</p>
+        </div>
+
+        <div id="orders-table-wrapper" class="overflow-x-auto hidden">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-900/60 text-[11px] font-bold text-stone-400 uppercase tracking-wider">
+                <th class="py-3.5 px-4">เลขคำสั่งซื้อ / เวลา</th>
+                <th class="py-3.5 px-4">ลูกค้า & ที่อยู่จัดส่ง</th>
+                <th class="py-3.5 px-4">รายการสินค้า</th>
+                <th class="py-3.5 px-4 text-center">ช่องทางชำระ</th>
+                <th class="py-3.5 px-4 text-right">ยอดรวม (บาท)</th>
+                <th class="py-3.5 px-4 text-center">การอนุมัติสลิป</th>
+                <th class="py-3.5 px-4 text-center">สถานะออเดอร์</th>
+                <th class="py-3.5 px-4 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="orders-rows" class="divide-y divide-stone-100 dark:divide-stone-800/60 text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <div id="order-detail-modal" class="mwrap hidden w-full h-full">
+      <div class="mbox max-w-3xl p-6 sm:p-8 anim-up my-auto max-h-[92vh] overflow-y-auto space-y-6">
+        <button onclick="closeOrderDetailModal()" class="mclose"><i class="fas fa-times"></i></button>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-stone-100 dark:border-stone-800">
+          <div>
+            <span id="detail-order-number" class="font-extrabold text-xl text-stone-900 dark:text-stone-100 font-sans tracking-wide">#ORD-000</span>
+            <p id="detail-order-date" class="text-xs text-stone-400 mt-0.5 font-medium"></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div id="detail-payment-status-badge"></div>
+            <div id="detail-order-status-select-container">
+              <select id="detail-status-select" onchange="updateOrderStatusFromModal(event)" class="inp text-xs font-bold py-1.5 px-3">
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="shipped">Shipped</option>
+                <option value="done">Done</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="detail-tracking-block" class="bg-stone-50 dark:bg-stone-900/60 p-4 rounded-2xl border border-stone-200/60 dark:border-stone-800 space-y-2">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-stone-400">เลขพัสดุ</p>
+              <p id="detail-tracking-hint" class="text-[11px] text-stone-500">กรอกเลขพัสดุเมื่อยืนยันคำสั่งซื้อหรือจัดส่งแล้ว</p>
+            </div>
+            <span id="detail-tracking-badge" class="hidden rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">ต้องกรอกก่อนยืนยัน</span>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input id="detail-tracking-input" type="text" placeholder="กรอกเลขพัสดุ / Tracking Number" class="inp flex-1 text-sm font-semibold py-2.5 px-3">
+            <button type="button" id="detail-tracking-save-btn" onclick="saveTrackingNumberFromModal()" class="border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-xs font-bold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition whitespace-nowrap">
+              บันทึกเลขพัสดุ
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-stone-50 dark:bg-stone-900/60 p-4.5 rounded-2xl border border-stone-200/60 dark:border-stone-800 space-y-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1.5">
+              <i class="fas fa-user-circle text-primary"></i> ลูกค้าและที่อยู่จัดส่ง
+            </h4>
+            <div class="space-y-1.5 text-xs">
+              <p class="font-bold text-stone-900 dark:text-stone-100 text-sm" id="detail-customer-name">-</p>
+              <p class="font-mono text-stone-600 dark:text-stone-300" id="detail-customer-phone">Phone: -</p>
+              <div class="pt-1 text-stone-500 dark:text-stone-400 leading-relaxed" id="detail-customer-address">Address: -</div>
+              <div id="detail-note-container" class="hidden pt-1">
+                <p id="detail-note" class="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200/50 dark:border-amber-900/30"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-stone-50 dark:bg-stone-900/60 p-4.5 rounded-2xl border border-stone-200/60 dark:border-stone-800 space-y-3 flex flex-col justify-between">
+            <div>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><i class="fas fa-receipt text-primary"></i> สลิปการชำระเงิน</span>
+                <span id="detail-pay-method-badge" class="normal-case"></span>
+              </h4>
+              <div id="detail-slip-container" class="mt-3 flex items-center justify-center bg-white dark:bg-stone-850 rounded-xl p-3 border border-stone-200/60 dark:border-stone-700 min-h-[140px]">
+                <div class="text-center w-full">
+                  <img id="detail-slip-img" src="" alt="สลิป" onclick="openSlipModal()" class="hidden mx-auto max-h-56 rounded-xl object-contain cursor-zoom-in shadow-sm">
+                  <p id="detail-slip-name" class="mt-2 text-[11px] font-semibold text-stone-500 dark:text-stone-400">Loading...</p>
+                </div>
+              </div>
+            </div>
+
+            <div id="detail-slip-actions" class="pt-2 border-t border-stone-200/60 dark:border-stone-800 hidden flex-col gap-2">
+              <p class="text-[11px] text-amber-700 dark:text-amber-400 font-semibold text-center mb-1">สลิปรอการตรวจสอบ</p>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="approveSlipFromActive()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
+                  <i class="fas fa-check-circle"></i> อนุมัติ
+                </button>
+                <button type="button" onclick="rejectSlipFromActive()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
+                  <i class="fas fa-circle-xmark"></i> ไม่อนุมัติ
+                </button>
+              </div>
+            </div>
+            <div class="pt-2 border-t border-stone-200/60 dark:border-stone-800">
+              <p class="text-[10px] uppercase tracking-wider font-bold text-stone-400 mb-1">ยอดรวมคำสั่งซื้อ</p>
+              <p id="detail-total-amount" class="text-xl font-black text-primary dark:text-amber-300 font-sans">0</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1.5">
+            <i class="fas fa-box-open text-primary"></i> รายการสินค้า
+          </h4>
+          <div id="detail-items-list" class="divide-y divide-stone-100 dark:divide-stone-800 bg-stone-50/50 dark:bg-stone-900/40 rounded-2xl border border-stone-200/60 dark:border-stone-800 p-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="slip-modal" class="mwrap hidden z-[100]" onclick="closeSlipModal()">
+      <div class="relative max-w-lg max-h-[92vh] flex flex-col items-center justify-center p-4 my-auto" onclick="event.stopPropagation()">
+        <button onclick="closeSlipModal()" class="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-stone-900 text-white flex items-center justify-center text-sm shadow-xl z-20 hover:bg-stone-800 transition">
+          <i class="fas fa-times"></i>
+        </button>
+        <img id="slip-modal-img" src="" alt="สลิปรูปใหญ่" class="max-w-full max-h-[75vh] rounded-2xl object-contain shadow-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800">
+
+        <div id="slip-modal-actions" class="flex items-center gap-3 mt-3.5 w-full justify-center">
+          <button type="button" onclick="approveSlipFromActive()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg transition flex items-center gap-2">
+            <i class="fas fa-circle-check"></i> อนุมัติสลิปนี้
+          </button>
+          <button type="button" onclick="rejectSlipFromActive()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg transition flex items-center gap-2">
+            <i class="fas fa-circle-xmark"></i> ไม่อนุมัติสลิป
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="site-footer py-8 text-center text-xs mt-auto">
+      <div class="max-w-7xl mx-auto px-4 space-y-1">
+        <p class="text-amber-200/40 uppercase tracking-[.2em] text-[10px] font-bold">Ratt Bookstore Orders Portal</p>
+        <p>© 2026 ร้านหนังสือรัตน์ · ระบบจัดการคำสั่งซื้อเชื่อมต่อ Supabase</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="orders.js?v=20260815-2"></script>
+  <script src="orders-website.js?v=20260815-1"></script>
+  <script src="orders-shopee.js?v=20260815-1"></script>
+  <script src="orders-tiktok.js?v=20260815-1"></script>
+  <script>
+    setupOrdersTableHeaders = function() {
+      const headRow = document.querySelector('#orders-table-wrapper thead tr');
+      if (!headRow) return;
+      headRow.innerHTML = `
+        <th class="py-3.5 px-4">วันที่สั่งซื้อ</th>
+        <th class="py-3.5 px-4">เลขออเดอร์</th>
+        <th class="py-3.5 px-4">ชื่อสินค้า</th>
+        <th class="py-3.5 px-4">ผู้ซื้อ</th>
+        <th class="py-3.5 px-4 text-center">จัดการ</th>
+      `;
+    };
+
+    renderOrdersTable = function(list) {
+      const wrapper = document.getElementById('orders-table-wrapper');
+      const empty = document.getElementById('orders-empty');
+      const tbody = document.getElementById('orders-rows');
+
+      if (!wrapper || !empty || !tbody) return;
+
+      if (!list.length) {
+        wrapper.classList.add('hidden');
+        empty.classList.remove('hidden');
+        tbody.innerHTML = '';
+        return;
+      }
+
+      empty.classList.add('hidden');
+      wrapper.classList.remove('hidden');
+      setupOrdersTableHeaders();
+
+      tbody.innerHTML = list.map((row) => `
+        <tr class="hover:bg-stone-50/80 dark:hover:bg-stone-850/50 transition duration-150">
+          <td class="py-3.5 px-4 min-w-[170px] align-top">
+            <div class="space-y-1">
+              <p class="font-bold text-stone-900 dark:text-stone-100">${formatCompactDate(row.orderDate)}</p>
+              <p class="text-[10px] text-stone-500 dark:text-stone-400">ส่งภายใน: ${formatCompactDate(row.shipByDate)}</p>
+              <p class="text-[10px] text-stone-500 dark:text-stone-400">ชำระเงิน: ${row.paidTime ? formatCompactDate(row.paidTime) : '-'}</p>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 min-w-[210px] align-top">
+            <button onclick="openOrderDetailModal(${row.orderId})" class="text-left">
+              <p class="font-extrabold text-stone-900 dark:text-stone-100 font-sans text-xs hover:text-primary transition">${row.orderNumber}</p>
+              <p class="mt-1 font-mono text-[11px] text-stone-500 dark:text-stone-300">${safeText(row.trackingNumber, '-')}</p>
+              <p class="text-[10px] text-stone-400 mt-1">${getStatusBadge(row.status)}</p>
+            </button>
+          </td>
+          <td class="py-3.5 px-4 min-w-[340px] align-top">
+            <p class="font-mono text-[11px] font-bold text-stone-600 dark:text-stone-300 mb-1">${safeText(row.sku, '-')}</p>
+            <p class="font-semibold text-stone-900 dark:text-stone-100">${safeText(row.productName, '-')}</p>
+            <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div class="rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/70 px-3 py-2">
+                <p class="text-[10px] font-bold text-stone-400 dark:text-stone-500">จำนวน</p>
+                <p class="mt-1 text-xs font-extrabold text-stone-900 dark:text-stone-100">${row.quantity}</p>
+              </div>
+              <div class="rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/70 px-3 py-2">
+                <p class="text-[10px] font-bold text-stone-400 dark:text-stone-500">ราคา</p>
+                <p class="mt-1 text-xs font-black text-primary dark:text-amber-300 font-sans">${formatMoney(row.price)}</p>
+              </div>
+              <div class="rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/70 px-3 py-2">
+                <p class="text-[10px] font-bold text-stone-400 dark:text-stone-500">ค่าจัดส่ง</p>
+                <p class="mt-1 text-xs font-bold text-stone-700 dark:text-stone-200">${formatMoney(row.shippingFee)}</p>
+              </div>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+              <span class="inline-flex items-center gap-1 rounded-md border border-stone-200 dark:border-stone-700 px-2 py-1 text-stone-500 dark:text-stone-300">${getPaymentMethodLabel(row.paymentMethod)}</span>
+              <span class="inline-flex items-center gap-1 rounded-md border border-stone-200 dark:border-stone-700 px-2 py-1 text-stone-500 dark:text-stone-300">${getSlipStatusLabel(row.paymentStatus)}</span>
+            </div>
+          </td>
+          <td class="py-3.5 px-4 min-w-[220px] align-top">
+            <p class="font-bold text-stone-900 dark:text-stone-100">${safeText(row.buyer, '-')}</p>
+            <p class="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">${safeText(row.phone, '-')}</p>
+            ${formatAddressMultiLine(row.address)}
+          </td>
+          <td class="py-3.5 px-4 text-center align-top min-w-[170px]">
+            <div class="flex flex-col gap-2">
+              <button onclick="openOrderDetailModal(${row.orderId})" class="border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-2 text-[11px] font-bold hover:bg-stone-100 dark:hover:bg-stone-800 transition">
+                <i class="fas fa-eye mr-1"></i> ดู
+              </button>
+              <button onclick="printShippingLabel(${row.orderId})" class="btn-primary px-3 py-2 text-[11px] font-bold shadow-sm">
+                <i class="fas fa-print mr-1"></i> พิมพ์
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    };
+  </script>
+</body>
+</html>
