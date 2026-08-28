@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจัดการหนังสือ | ร้านหนังสือรัตน์ (Admin Portal)</title>
+  <meta name="description" content="ระบบจัดการหนังสือและสต็อกสินค้าหลังร้าน สำหรับร้านหนังสือรัตน์">
+  <link rel="icon" type="image/png" href="social-preview.png">
+  <link rel="shortcut icon" type="image/png" href="social-preview.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              light: "#F3E3D0",
+              DEFAULT: "#8C5A34",
+              hover: "#73472B",
+              dark: "#56331D"
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="page-bg min-h-screen flex flex-col text-stone-800 dark:text-stone-100 transition-colors duration-200">
+
+  <div id="admin-auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md panel p-6 sm:p-7">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center bg-gradient-to-br from-amber-600 via-orange-500 to-amber-400 text-white shadow-lg shadow-amber-700/20">
+          <i class="fas fa-shield-halved text-xl"></i>
+        </div>
+        <h2 class="mt-4 text-2xl font-black text-stone-900 dark:text-stone-100">เข้าสู่ระบบแอดมิน</h2>
+        <p class="mt-1 text-xs text-stone-500 dark:text-stone-400">กรอกอีเมลและรหัสผ่านเพื่อเข้าถึงระบบหลังร้าน</p>
+      </div>
+
+      <form id="admin-login-form" class="space-y-4">
+        <div>
+          <label for="admin-email" class="block mb-1.5 text-xs font-bold text-stone-700 dark:text-stone-300">อีเมล</label>
+          <input id="admin-email" type="email" required class="inp text-sm" placeholder="admin@rattbookstore.com">
+        </div>
+        <div>
+          <label for="admin-password" class="block mb-1.5 text-xs font-bold text-stone-700 dark:text-stone-300">รหัสผ่าน</label>
+          <input id="admin-password" type="password" required class="inp text-sm" placeholder="กรอกรหัสผ่าน">
+        </div>
+        <div id="admin-auth-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-600 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-400"></div>
+        <button type="submit" class="btn-primary w-full py-3 text-sm font-bold">
+          <i class="fas fa-right-to-bracket mr-2"></i> เข้าสู่ระบบ
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="admin-app-shell" class="hidden flex flex-col min-h-screen">
+  <!-- Header / Navigation -->
+  <header class="glass-nav sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br from-amber-600 via-orange-500 to-amber-400 shadow-lg shadow-amber-700/20 border border-amber-200/20">
+          <i class="fas fa-sliders text-amber-50"></i>
+        </div>
+        <div class="leading-tight">
+          <div class="flex items-center gap-2">
+            <h1 class="text-base font-extrabold tracking-tight text-stone-900 dark:text-stone-100">ระบบจัดการหลังร้าน</h1>
+            <span class="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">Admin</span>
+          </div>
+          <p class="text-[10px] text-stone-500 dark:text-stone-400 font-semibold tracking-wide">ร้านหนังสือรัตน์ · Supabase Management</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <a href="admins.html" class="flex items-center gap-1.5 text-xs font-bold text-stone-600 dark:text-stone-300 hover:text-primary dark:hover:text-amber-300 border border-stone-200 dark:border-stone-700 rounded-xl px-3.5 py-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+          <i class="fas fa-user-shield text-xs"></i> จัดการแอดมิน
+        </a>
+        <a href="orders.html" class="flex items-center gap-1.5 text-xs font-bold text-stone-600 dark:text-stone-300 hover:text-primary dark:hover:text-amber-300 border border-stone-200 dark:border-stone-700 rounded-xl px-3.5 py-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+          <i class="fas fa-receipt text-xs"></i> คำสั่งซื้อ
+        </a>
+        <a href="index.html" class="flex items-center gap-1.5 text-xs font-bold text-stone-600 dark:text-stone-300 hover:text-primary dark:hover:text-amber-300 border border-stone-200 dark:border-stone-700 rounded-xl px-3.5 py-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+          <i class="fas fa-store text-xs"></i> หน้าร้าน
+        </a>
+        <button onclick="toggleTheme()" class="ico-btn" title="เปลี่ยนธีม">
+          <i class="fas fa-moon text-sm dark:hidden"></i>
+          <i class="fas fa-sun text-sm hidden dark:block text-amber-300"></i>
+        </button>
+        <button id="admin-logout-btn" class="order-2 border border-stone-200 dark:border-stone-700 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+          <i class="fas fa-right-from-bracket mr-1"></i> ออกจากระบบ
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+
+    <!-- Summary Stats Bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
+      <div class="panel p-4 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 flex items-center justify-center text-xl shrink-0">
+          <i class="fas fa-book"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">หนังสือทั้งหมด</p>
+          <p id="stat-total" class="text-2xl font-black text-stone-900 dark:text-stone-100 font-sans mt-0.5">0</p>
+        </div>
+      </div>
+      <div class="panel p-4 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
+          <i class="fas fa-box-archive"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">พร้อมส่ง (In Stock)</p>
+          <p id="stat-instock" class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-sans mt-0.5">0</p>
+        </div>
+      </div>
+      <div class="panel p-4 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 flex items-center justify-center text-xl shrink-0">
+          <i class="fas fa-box-open"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">สต็อกที่ใช้ได้</p>
+          <p id="stat-usable-stock" class="text-2xl font-black text-teal-600 dark:text-teal-400 font-sans mt-0.5">0</p>
+        </div>
+      </div>
+      <div class="panel p-4 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center text-xl shrink-0">
+          <i class="fas fa-boxes-packing"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">สต็อกชำรุด</p>
+          <p id="stat-damaged-stock" class="text-2xl font-black text-rose-600 dark:text-rose-400 font-sans mt-0.5">0</p>
+        </div>
+      </div>
+      <div class="panel p-4 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center text-xl shrink-0">
+          <i class="fas fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">สินค้าหมด (Out)</p>
+          <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">สต็อกต่ำ</p>
+          <p id="stat-low-stock" class="text-2xl font-black text-amber-600 dark:text-amber-300 font-sans mt-0.5">0</p>
+        </div>
+      </div>
+      <div class="panel p-4 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center text-xl shrink-0">
+          <i class="fas fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">à¸ªà¸´à¸™à¸„à¹‰à¸²à¸«à¸¡à¸” (Out)</p>
+          <p id="stat-out" class="text-2xl font-black text-rose-600 dark:text-rose-400 font-sans mt-0.5">0</p>
+        </div>
+      </div>
+      <div class="panel p-4 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 flex items-center justify-center text-xl shrink-0">
+          <i class="fas fa-layer-group"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">หมวดหมู่ทั้งหมด</p>
+          <p id="stat-categories" class="text-2xl font-black text-sky-600 dark:text-sky-400 font-sans mt-0.5">0</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls & Filter Bar -->
+    <div class="panel p-4 md:p-5 space-y-4">
+      <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        <!-- Search -->
+        <div class="relative flex-1">
+          <input type="text" id="admin-search" oninput="filterAdminProducts()" placeholder="ค้นหาชื่อหนังสือ / SKU / หมวดหมู่..." class="inp pl-10 text-xs py-2.5">
+          <i class="fas fa-search absolute left-3.5 top-3 text-stone-400 text-xs"></i>
+        </div>
+
+        <button onclick="openAddModal()" class="btn-primary px-4 py-2.5 text-xs font-bold shadow-md whitespace-nowrap">
+          <i class="fas fa-plus mr-1"></i> เพิ่มหนังสือใหม่
+        </button>
+
+
+        <!-- Filter category -->
+        <select id="admin-cat-filter" onchange="filterAdminProducts()" class="inp text-xs py-2.5 w-full md:w-48 cursor-pointer">
+          <option value="all">หมวดหมู่ทั้งหมด</option>
+        </select>
+
+        <!-- Filter stock status -->
+        <select id="admin-stock-filter" onchange="filterAdminProducts()" class="inp text-xs py-2.5 w-full md:w-44 cursor-pointer">
+          <option value="all">สถานะสต็อกทั้งหมด</option>
+          <option value="instock">พร้อมส่ง (In Stock)</option>
+          <option value="outofstock">สินค้าหมด (Out of Stock)</option>
+        </select>
+
+        <button onclick="exportAdminProductsToExcel()" class="flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition whitespace-nowrap">
+          <i class="fas fa-file-excel text-[11px]"></i> Export Excel
+        </button>
+
+        <!-- Refresh button -->
+        <button onclick="loadAdminProducts()" class="flex items-center justify-center gap-1.5 border border-stone-200 dark:border-stone-700 rounded-xl px-4 py-2.5 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-800 transition">
+          <i class="fas fa-rotate-right text-[10px]"></i> รีเฟรช
+        </button>
+      </div>
+    </div>
+
+    <!-- Books Table Container -->
+    <div class="panel overflow-hidden">
+      <!-- Loading spinner -->
+      <div id="admin-loading" class="py-20 flex flex-col items-center gap-3">
+        <div class="spinner"></div>
+        <p class="text-xs text-stone-400 font-semibold">กำลังโหลดข้อมูลหนังสือ...</p>
+      </div>
+
+      <!-- Empty state -->
+      <div id="admin-empty" class="hidden py-16 text-center space-y-3">
+        <i class="fas fa-book-open text-4xl text-stone-300 dark:text-stone-700"></i>
+        <p class="text-sm font-bold text-stone-600 dark:text-stone-400">ยังไม่พบรายการหนังสือ</p>
+        <button onclick="openAddModal()" class="btn-primary px-4 py-2 text-xs font-bold">
+          <i class="fas fa-plus mr-1"></i> เพิ่มหนังสือแรก
+        </button>
+      </div>
+
+      <!-- Products Table -->
+      <div id="admin-table-wrapper" class="overflow-x-auto hidden">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-900/60 text-[11px] font-bold text-stone-400 uppercase tracking-wider">
+              <th class="py-3.5 px-4 w-16 text-center">รูป</th>
+              <th class="py-3.5 px-4">ชื่อหนังสือ / SKU</th>
+              <th class="py-3.5 px-4">หมวดหมู่</th>
+              <th class="py-3.5 px-4 w-28 text-right">ราคา (บาท)</th>
+              <th class="py-3.5 px-4 w-36 text-center">จำนวนสต็อก</th>
+              <th class="py-3.5 px-4 w-28 text-center">สถานะ</th>
+              <th class="hidden sm:table-cell py-3.5 px-4 w-28 text-center sticky-action-col">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="admin-product-rows" class="divide-y divide-stone-100 dark:divide-stone-800/60 text-xs">
+            <!-- Rows injected by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add / Edit Book Modal -->
+  <div id="book-form-modal" class="mwrap hidden w-full h-full">
+    <div class="mbox max-w-2xl p-6 sm:p-8 anim-up my-auto max-h-[90vh] overflow-y-auto">
+      <button onclick="closeBookFormModal()" class="mclose"><i class="fas fa-times"></i></button>
+
+      <div class="flex items-center gap-3 mb-6 pb-4 border-b border-stone-100 dark:border-stone-800">
+        <div class="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary dark:text-amber-300 text-lg shrink-0">
+          <i id="form-icon" class="fas fa-plus"></i>
+        </div>
+        <div>
+          <h3 id="form-title" class="font-extrabold text-lg text-stone-900 dark:text-stone-100">เพิ่มหนังสือใหม่</h3>
+          <p id="form-subtitle" class="text-xs text-stone-400">กรอกข้อมูลหนังสือเพื่อบันทึกลงใน Supabase</p>
+        </div>
+      </div>
+
+      <form id="book-form" onsubmit="handleFormSubmit(event)" class="space-y-4 text-xs font-bold text-stone-700 dark:text-stone-300">
+        <input type="hidden" id="form-book-id">
+
+        <!-- Title & SKU -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block mb-1.5" for="input-name">ชื่อหนังสือ *</label>
+            <input type="text" id="input-name" required placeholder="เช่น ความลับของดอกไม้กลางคืน" class="inp">
+          </div>
+          <div>
+            <label class="block mb-1.5" for="input-sku">รหัสสินค้า / SKU *</label>
+            <input type="text" id="input-sku" required placeholder="เช่น BK-001" class="inp font-mono">
+          </div>
+        </div>
+
+        <!-- Category & Prices -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block mb-1.5" for="input-category">หมวดหมู่หนังสือ</label>
+            <input type="text" id="input-category" placeholder="เช่น นิยาย, การเงิน" class="inp">
+          </div>
+          <div>
+            <label class="block mb-1.5" for="input-price">ราคาขาย (บาท) *</label>
+            <input type="number" id="input-price" step="0.01" min="0" required placeholder="295" class="inp">
+          </div>
+          <div>
+            <label class="block mb-1.5" for="input-regular-price">ราคาปกติ / ราคาเต็ม</label>
+            <input type="number" id="input-regular-price" step="0.01" min="0" placeholder="295" class="inp">
+          </div>
+        </div>
+
+        <!-- Stock Settings -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-stone-50 dark:bg-stone-900/60 p-3.5 rounded-2xl border border-stone-100 dark:border-stone-800">
+          <div>
+            <label class="block mb-1.5" for="input-stock-qty">จำนวนสต็อก (เล่ม)</label>
+            <input type="number" id="input-stock-qty" min="0" value="10" placeholder="0" class="inp" readonly>
+          </div>
+          <div>
+            <label class="block mb-1.5" for="input-usable-stock-qty">สต็อกที่ใช้ได้</label>
+            <input type="number" id="input-usable-stock-qty" min="0" value="10" placeholder="0" class="inp">
+          </div>
+          <div>
+            <label class="block mb-1.5" for="input-damaged-stock-qty">สต็อกชำรุด</label>
+            <input type="number" id="input-damaged-stock-qty" min="0" value="0" placeholder="0" class="inp">
+          </div>
+          <div>
+            <label class="block mb-1.5" for="input-stock-status">สถานะสินค้า</label>
+            <select id="input-stock-status" class="inp cursor-pointer">
+              <option value="instock">พร้อมส่ง (In Stock)</option>
+              <option value="outofstock">หมดชั่วคราว (Out of Stock)</option>
+            </select>
+          </div>
+          <div class="flex items-center pt-5 sm:col-span-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="input-manage-stock" checked class="w-4 h-4 text-primary accent-primary rounded">
+              <span class="text-xs font-bold text-stone-700 dark:text-stone-300">เปิดคุมสต็อกอัตโนมัติ</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Interactive Image Manager -->
+        <div class="bg-stone-50 dark:bg-stone-900/60 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-bold text-stone-700 dark:text-stone-300">
+              <i class="fas fa-images text-primary mr-1"></i> Book Images (<span id="image-count-text">0</span>)
+            </label>
+            <span class="text-[10px] text-stone-400 font-normal">* First image is the cover</span>
+          </div>
+          <div id="image-preview-grid" class="flex flex-wrap gap-3 py-1 min-h-[90px] items-center border-2 border-dashed border-stone-200 dark:border-stone-800 rounded-xl p-3 bg-white dark:bg-stone-900">
+            <!-- Thumbnails injected by JS -->
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div class="flex gap-1.5">
+              <input type="url" id="input-add-image-url" placeholder="Paste image URL (https://...)" class="inp text-xs py-2 flex-1">
+              <button type="button" onclick="addImageFromUrl()" class="btn-primary px-3.5 py-2 text-xs font-bold shrink-0">
+                <i class="fas fa-plus mr-1"></i> Add URL
+              </button>
+            </div>
+            <label class="btn-primary py-2 px-3 text-[11px] font-bold cursor-pointer rounded-xl flex items-center justify-center gap-1.5 shadow-sm">
+              <i class="fas fa-cloud-arrow-up"></i> Upload Images
+              <input type="file" id="form-image-file-input" accept="image/*" multiple onchange="handleImageFileUpload(event)" class="hidden">
+            </label>
+          </div>
+          <p class="text-[10px] text-stone-400 font-normal">Click an image to set it as cover, or remove it.</p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label class="block mb-1.5" for="input-short-desc">คำโปรยสั้น</label>
+            <input type="text" id="input-short-desc" placeholder="ข้อความสั้นที่แสดงใต้หน้าปกหรือหน้าแสดงสินค้า" class="inp">
+          </div>
+          <div>
+            <label class="block mb-1.5" for="input-desc">รายละเอียดหนังสือ</label>
+            <textarea id="input-desc" rows="5" placeholder="รายละเอียดเพิ่มเติมเกี่ยวกับหนังสือ เนื้อหา ผู้เขียน หรือข้อมูลอื่น ๆ" class="inp resize-y min-h-[120px]"></textarea>
+          </div>
+        </div>
+
+        <div>
+          <label class="block mb-1.5">Package Size (cm)</label>
+          <div class="grid grid-cols-3 gap-2">
+            <input type="number" id="input-len" min="0" step="0.1" placeholder="ความยาว (ซม.)" class="inp">
+            <input type="number" id="input-width" min="0" step="0.1" placeholder="ความกว้าง (ซม.)" class="inp">
+            <input type="number" id="input-height" min="0" step="0.1" placeholder="ความสูง (ซม.)" class="inp">
+          </div>
+        </div>
+
+        <p id="form-error" class="text-rose-500 text-xs hidden font-bold"></p>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-stone-100 dark:border-stone-800">
+          <button type="button" onclick="closeBookFormModal()" class="px-5 py-2.5 text-xs font-bold border border-stone-200 dark:border-stone-700 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+            ยกเลิก
+          </button>
+          <button type="submit" id="form-submit-btn" class="btn-primary px-6 py-2.5 text-xs font-bold shadow-md">
+            <i class="fas fa-save mr-1"></i> บันทึก
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Book Cover Preview Modal -->
+  <div id="image-lightbox-modal" class="mwrap hidden w-full h-full">
+    <div class="mbox image-lightbox-box max-w-4xl p-4 sm:p-5 anim-up my-auto">
+      <button onclick="closeImageLightbox()" class="mclose"><i class="fas fa-times"></i></button>
+      <div class="image-lightbox-stage">
+        <img id="image-lightbox-preview" src="" alt="ตัวอย่างรูปหนังสือ" class="image-lightbox-preview">
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Dialog -->
+  <div id="delete-modal" class="mwrap hidden w-full h-full">
+    <div class="mbox max-w-md p-6 anim-up my-auto text-center space-y-4">
+      <div class="w-14 h-14 bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 rounded-full mx-auto flex items-center justify-center text-2xl">
+        <i class="fas fa-trash"></i>
+      </div>
+      <div>
+        <h3 class="font-extrabold text-base text-stone-900 dark:text-stone-100">ยืนยันการลบหนังสือ</h3>
+        <p class="text-xs text-stone-500 dark:text-stone-400 mt-1">คุณต้องการลบหนังสือรายการนี้ออกจากระบบใช่หรือไม่?</p>
+        <p id="delete-book-name" class="font-bold text-sm text-rose-600 dark:text-rose-400 mt-2 px-3 py-2 bg-rose-50 dark:bg-rose-950/30 rounded-xl truncate"></p>
+      </div>
+      <div class="flex justify-center gap-3 pt-2">
+        <button onclick="closeDeleteModal()" class="px-5 py-2.5 text-xs font-bold border border-stone-200 dark:border-stone-700 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800 transition">ยกเลิก</button>
+        <button onclick="confirmDeleteBook()" id="delete-confirm-btn" class="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-md transition">
+          ยืนยันการลบ</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer py-8 text-center text-xs mt-auto">
+    <div class="max-w-7xl mx-auto px-4 space-y-1">
+      <p class="text-amber-200/40 uppercase tracking-[.2em] text-[10px] font-bold">ร้านหนังสือรัตน์ · ระบบจัดการหลังร้าน</p>
+      <p>© 2026 ร้านหนังสือรัตน์ · ระบบจัดการสินค้าเชื่อมต่อ Supabase</p>
+    </div>
+  </footer>
+
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
