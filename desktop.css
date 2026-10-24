@@ -1,0 +1,230 @@
+/* Desktop presentation layer */
+@media (min-width: 768px) {
+  .product-page .book-landing-page {
+    display: block !important;
+  }
+
+  .product-page #product-detail-modal {
+    display: none !important;
+  }
+
+  .product-page .book-landing-hero {
+    display: none;
+  }
+
+  .product-page .landing-image-order-cta {
+    top: 43%;
+    left: 1%;
+    width: 46%;
+    min-height: 76px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .product-page .landing-buy-bottom {
+    width: 360px;
+    min-height: 62px;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-size: 1.05rem;
+  }
+
+  .product-page #product-detail-modal .mbox {
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 72rem;
+    width: min(92vw, 1120px);
+    height: min(82vh, 680px);
+    max-height: calc(100vh - 72px);
+    overflow: hidden;
+  }
+
+  .product-page #product-detail-modal .mbox > div {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .product-page #product-detail-modal .mbox > div > .w-full.md\:w-2\/5 {
+    width: 44%;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 0 1 44%;
+  }
+
+  .product-page #product-detail-modal .mbox > div > .flex-1.p-6 {
+    width: 56%;
+    padding: 42px 44px 36px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 22px;
+    min-width: 0;
+    flex: 1 1 56%;
+  }
+
+  .product-page #product-detail-modal #modal-img-wrapper {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: auto !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .product-page #product-detail-modal #modal-img-main {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .product-page #product-detail-modal #modal-img-thumbs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto !important;
+    width: 100%;
+    height: 58px;
+    min-width: 0;
+    padding: 2px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+  }
+
+  .product-page #product-detail-modal #modal-img-thumbs > div {
+    flex: 0 0 78px !important;
+    width: 78px;
+    height: 54px;
+    aspect-ratio: auto !important;
+    border-radius: 9px;
+  }
+
+  .product-page #product-detail-modal #modal-img-thumbs > div img {
+    object-fit: contain;
+    background: #241a14;
+  }
+
+  .product-page #product-detail-modal #modal-title {
+    font-size: 2rem;
+    line-height: 1.25;
+  }
+
+  .product-page #product-detail-modal #modal-sku {
+    font-size: 1rem;
+  }
+
+  .product-page #product-detail-modal #modal-price {
+    font-size: 2.4rem;
+  }
+
+  .product-page #product-detail-modal #modal-stock-badge {
+    font-size: .75rem;
+  }
+
+  .product-page #product-detail-modal #modal-stock-qty,
+  .product-page #product-detail-modal #modal-manage-stock {
+    font-size: 1.1rem;
+  }
+
+  .product-page #product-detail-modal #modal-desc {
+    font-size: 1.08rem;
+    line-height: 1.8;
+    max-width: 58ch;
+    color: #f4e7d8;
+    font-weight: 500;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  .product-page #product-detail-modal .modal-purchase-actions,
+  .product-page #product-detail-modal #modal-add-to-cart,
+  .product-page #product-detail-modal #modal-qty {
+    font-size: 1rem;
+  }
+
+  .product-page #product-detail-modal .text-xs {
+    font-size: 1rem;
+  }
+
+  .product-page #product-detail-modal #modal-desc {
+    max-height: 150px;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+
+  .product-page .book-landing-page {
+    max-width: 980px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .product-page .book-landing-topbar {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .product-page .landing-buy,
+  .product-page .landing-feedback {
+    min-width: 150px;
+  }
+}
+
+@media (min-width: 768px) and (max-height: 820px) {
+  .product-page #product-detail-modal .mbox {
+    height: min(86vh, 640px);
+  }
+
+  .product-page #product-detail-modal .mbox > div > .w-full.md\:w-2\/5 {
+    padding: 18px;
+  }
+
+  .product-page #product-detail-modal .mbox > div > .flex-1.p-6 {
+    padding: 22px 30px;
+    gap: 14px;
+  }
+
+  .product-page #product-detail-modal #modal-title {
+    font-size: 1.6rem;
+  }
+
+  .product-page #product-detail-modal #modal-price {
+    font-size: 2rem;
+  }
+
+  .product-page #product-detail-modal #modal-desc {
+    max-height: 92px;
+    font-size: .96rem;
+    line-height: 1.55;
+    overflow: hidden;
+  }
+
+  .product-page #product-detail-modal #modal-img-thumbs {
+    flex-basis: 50px;
+    height: 50px;
+  }
+}
+
+@media (min-width: 768px) {
+  .product-page .book-landing-page {
+    padding-top: 16px;
+  }
+
+  .product-page .book-landing-topbar {
+    border-radius: 18px 18px 0 0;
+  }
+
+  .product-page .book-landing-gallery {
+    padding: 20px;
+    gap: 20px;
+  }
+
+  .product-page .landing-image-block {
+    border-radius: 18px;
+  }
+}
